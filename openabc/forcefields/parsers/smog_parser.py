@@ -4,7 +4,6 @@ import mdtraj
 from openabc.utils import helper_functions
 from openabc.utils.shadow_map import find_cg_pairs_from_atomistic_pdb
 from openabc.lib import _amino_acids
-from openabc.lib import _rna_nucleotides
 
 _smog_amino_acid_mass_dict = dict(ALA=71.0788, ARG=156.1875, ASN=114.1038, ASP=115.0886, CYS=103.1388, 
                                   GLU=129.1155, GLN=128.1307, GLY=57.0519, HIS=137.1411, ILE=113.1594, 
@@ -17,13 +16,8 @@ _smog_amino_acid_charge_dict = dict(ALA=0.0, ARG=1.0, ASN=0.0, ASP=-1.0, CYS=0.0
                                     SER=0.0, THR=0.0, TRP=0.0, TYR=0.0, VAL=0.0)
 
 _smog_rna_nucleotide_mass_dict = dict(RA=135.13, RC=111.1, RG=151.13, RU=112.0868)
-#_smog_rna_nucleotide_mass_dict = dict(RA=135.13*100, RC=111.1*100, RG=151.13*100, RU=112.0868*100)
 
 _smog_rna_nucleotide_charge_dict = dict(RA=-1.0, RC=-1.0, RG=-1.0, RU=-1.0)
-
-#_smog_rna_nucleotide_mass_dict = dict(A=135.13, C=111.1, G=151.13, U=112.0868)
-
-#_smog_rna_nucleotide_charge_dict = dict(A=-1.0, C=-1.0, G=-1.0, U=-1.0)
 
 class SMOGParser(object):
     """
@@ -50,8 +44,6 @@ class SMOGParser(object):
         """
         
         self.mol_type = mol_type
-
-        # Verify the input has correct type parameter (I didn't do this in any other function. . . might be a good idea to do that later.)
         if self.mol_type != 'protein' and self.mol_type != 'rna':
             raise ValueError("Invalid mol_type. Use 'protein' or 'rna'.")
         
@@ -218,7 +210,6 @@ class SMOGParser(object):
         #'protein' replaced with 'sspn', standing for single site per residue. This is to denote that this works for our cg models of proteins and RNA, whereas DNA is 3spn (three site per nucleotide).
         self.sspn_bonds = pd.DataFrame(bonds, columns=['a1', 'a2'])
         self.sspn_bonds['r0'] = mdtraj.compute_distances(traj, bonds, periodic=use_pbc)[frame]
-        # # #thomas - 20000 may be incorrect for RNA
         self.sspn_bonds.loc[:, 'k_bond'] = 20000*bonded_energy_scale
         self.sspn_angles = pd.DataFrame(angles, columns=['a1', 'a2', 'a3'])
         self.sspn_angles['theta0'] = mdtraj.compute_angles(traj, angles, periodic=use_pbc)[frame]

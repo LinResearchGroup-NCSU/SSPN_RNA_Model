@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import mdtraj
 from MDAnalysis.lib.nsgrid import FastNS
-from openabc.lib import _amino_acids, _rna_nucleotides, _rna_nucleotides_unaltered
+from openabc.lib import _amino_acids, _rna_nucleotides_unaltered
 import networkx as nx
 import math
 import sys

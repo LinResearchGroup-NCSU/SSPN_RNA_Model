@@ -18,14 +18,6 @@ import openabc.utils.helper_functions as helper_functions
 import sys
 import os
 
-# print("############################################")
-# print("Python executable:", sys.executable)
-# print("Conda env:", os.environ.get("CONDA_DEFAULT_ENV"))
-# import importlib.util
-# spec = importlib.util.find_spec('openmmplumed')
-# print(spec)          # shows file path or None
-# print("############################################")
-
 class CGModel(object):
     """
     The general class with general methods that can be inherited by any other CG model classes. 
@@ -292,34 +284,6 @@ class CGModel(object):
         center_of_mass = np.average(positions, axis=0, weights=weights)
         positions = positions - center_of_mass + box_center
         self.simulation.context.setPositions(positions*unit.nanometer)
-    
-    # def add_reporters(self, report_interval, output_dcd='output.dcd', report_dcd=True, report_state_data=True):
-    #     """
-    #     Add reporters for OpenMM simulation. 
-        
-    #     Parameters
-    #     ----------
-    #     report_interval : int
-    #         Report dcd and report state interval.
-        
-    #     output_dcd : str
-    #         Output dcd file path. 
-        
-    #     report_dcd : bool
-    #         Whether to output dcd file. 
-        
-    #     report_state_data : bool
-    #         Whether to output simulation state and data. 
-        
-    #     """
-    #     if report_dcd:
-    #         dcd_reporter = app.DCDReporter(output_dcd, report_interval, enforcePeriodicBox=self.use_pbc)
-    #         self.simulation.reporters.append(dcd_reporter)
-    #     if report_state_data:
-    #         state_data_reporter = app.StateDataReporter(sys.stdout, report_interval, step=True, time=True, 
-    #                                                     potentialEnergy=True, kineticEnergy=True, totalEnergy=True, 
-    #                                                     temperature=True, speed=True)
-    #         self.simulation.reporters.append(state_data_reporter)
         
     def add_reporters(self, report_interval, output_dcd='output.dcd', report_dcd=True, report_state_data=True):
         """
