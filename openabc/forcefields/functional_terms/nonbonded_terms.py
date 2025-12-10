@@ -127,7 +127,6 @@ def ddd_dh_elec_term(charges, df_exclusions, use_pbc, salt_conc=150.0*unit.milli
     return elec
     
 
-##################################################################################
 def ddd_dh_elec_switch_term(charges, df_exclusions, use_pbc, salt_conc=150.0*unit.millimolar, 
                             temperature=300.0*unit.kelvin, cutoff1=1.2*unit.nanometer, cutoff2=1.5*unit.nanometer, 
                             switch_coeff=[1, 0, 0, -10, 15, -6], force_group=6):
@@ -175,7 +174,7 @@ def ddd_dh_elec_switch_term(charges, df_exclusions, use_pbc, salt_conc=150.0*uni
     elec.setCutoffDistance(cutoff2)
     elec.setForceGroup(force_group)
     return elec
-#########################################################################################
+
 
 def dh_elec_term(charges, df_exclusions, use_pbc, ldby=1*unit.nanometer, dielectric_water=80.0, 
                  cutoff=3.5*unit.nanometer, force_group=3):
