@@ -8,7 +8,8 @@ from openabc.forcefields.cg_model import CGModel
 from openabc.forcefields import functional_terms
 from openabc.forcefields.parameters import Mixin3SPN2ConfigParser
 from openabc.lib import _dna_nucleotides, _dna_WC_pair_dict
-from openabc.lib import _rna_nucleotides
+import warnings
+import sys
 import os
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
@@ -31,13 +32,13 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             Whether to parse the default 3SPN2 configuration file. 
         
         """
-        self.atoms = None
+        self.atomistic_dataframe = None
         self.dna_exclusions = None
         self.exclusions = None
         # note dna_exclusions and exclusions are not included in self.bonded_attr_names
         # since dna_exclusions and exclusions should be parsed after all the molecules are appended
-        self.bonded_attr_names = ['sspr_bonds', 'sspr_angles', 'sspr_dihedrals', 'native_pairs', 
-                                  'dna_bonds', 'dna_angles', 'dna_stackings', 'dna_dihedrals', 'sspr_exclusions']
+        self.bonded_attr_names = ['protein_bonds', 'protein_angles', 'protein_dihedrals', 'native_pairs', 
+                                  'dna_bonds', 'dna_angles', 'dna_stackings', 'dna_dihedrals', 'protein_exclusions']
         self.dna_type = dna_type
         if default_parse_config:
             # load parameters
@@ -77,7 +78,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         The code should be efficient if there are many DNA chains in the system. 
         
         """
-        atoms = self.atoms.copy()
+        atoms = self.atomistic_dataframe.copy()
         atoms['index'] = list(range(len(atoms.index)))
         new_chainIDs = []
         c = 0
@@ -121,23 +122,23 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             self.dna_exclusions = dna_exclusions.sort_values(by=['a1', 'a2'], ignore_index=True)
         else:
             self.dna_exclusions = pd.DataFrame(columns=['a1', 'a2'])
-        
+    
     def parse_all_exclusions(self):
         """
-        Parse all the exclusions (including sspr exclusions and DNA exclusions). 
+        Parse all the exclusions (including protein exclusions and DNA exclusions). 
         Run this command before adding nonbonded interactions. 
         
         """
         self.parse_dna_exclusions()
-        if hasattr(self, 'sspr_exclusions'):
-            if getattr(self, 'sspr_exclusions') is None:
-                self.sspr_exclusions = pd.DataFrame(columns=['a1', 'a2'])
+        if hasattr(self, 'protein_exclusions'):
+            if getattr(self, 'protein_exclusions') is None:
+                self.protein_exclusions = pd.DataFrame(columns=['a1', 'a2'])
         else:
-            self.sspr_exclusions = pd.DataFrame(columns=['a1', 'a2'])
-        exclusions = pd.concat([self.sspr_exclusions, self.dna_exclusions], ignore_index=True)
+            self.protein_exclusions = pd.DataFrame(columns=['a1', 'a2'])
+        exclusions = pd.concat([self.protein_exclusions, self.dna_exclusions], ignore_index=True)
         self.exclusions = exclusions.sort_values(by=['a1', 'a2'], ignore_index=True)
-
-    def add_protein_bonds(self, force_group=5):
+    
+    def add_protein_bonds(self, force_group=1):
         """
         Add protein bonds.
         
@@ -151,8 +152,10 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add protein bonds.')
             force = functional_terms.harmonic_bond_term(self.protein_bonds, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No protein bonds found, skip adding protein bonds.')
     
-    def add_protein_angles(self, force_group=6):
+    def add_protein_angles(self, force_group=2):
         """
         Add protein angles.
         
@@ -166,8 +169,10 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add protein angles.')
             force = functional_terms.harmonic_angle_term(self.protein_angles, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No protein angles found, skip adding protein angles.')
 
-    def add_protein_dihedrals(self, force_group=7):
+    def add_protein_dihedrals(self, force_group=3):
         """
         Add protein dihedrals. 
         
@@ -181,8 +186,10 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add protein dihedrals.')
             force = functional_terms.periodic_dihedral_term(self.protein_dihedrals, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No protein dihedrals found, skip adding protein dihedrals.')
 
-    def add_protein_native_pairs(self, force_group=8):
+    def add_native_pairs(self, force_group=4):
         """
         Add native pairs. 
         
@@ -195,8 +202,10 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         if hasattr(self, 'native_pairs'):
             print('Add native pairs.')
             force = functional_terms.native_pair_gaussian_term(self.native_pairs, self.use_pbc, force_group)
-            self.system.addForce(force)   
-
+            self.system.addForce(force)
+        else:
+            warnings.warn('No native pairs found, skip adding native pairs.')
+    
     def add_dna_bonds(self, force_group=5):
         """
         Add DNA bonds.
@@ -211,6 +220,8 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add DNA bonds.')
             force = functional_terms.class2_bond_term(self.dna_bonds, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No DNA bonds found, skip adding DNA bonds.')
         
     def add_dna_angles(self, force_group=6):
         """
@@ -226,6 +237,8 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add DNA angles.')
             force = functional_terms.harmonic_angle_term(self.dna_angles, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No DNA angles found, skip adding DNA angles.')
         
     def add_dna_stackings(self, force_group=7):
         """
@@ -241,6 +254,8 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add DNA stackings.')
             force = functional_terms.dna_3spn2_stacking_term(self.dna_stackings, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No DNA stackings found, skip adding DNA stackings.')
     
     def add_dna_dihedrals(self, force_group=8):
         """
@@ -256,12 +271,14 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             print('Add DNA dihedrals.')
             force = functional_terms.dna_3spn2_dihedral_term(self.dna_dihedrals, self.use_pbc, force_group)
             self.system.addForce(force)
+        else:
+            warnings.warn('No DNA dihedrals found, skip adding DNA dihedrals.')
     
     def add_dna_base_pairs(self, cutoff=1.8, force_group=9):
         """
         Add DNA base pair potentials. 
         
-        Please ensure two neighboring chains in self.atoms do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -274,7 +291,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         """
         print('Add DNA base pairs.')
         pair_definition = self.pair_definition[self.pair_definition['DNA'] == self.dna_type]
-        atoms = self.atoms.copy()
+        atoms = self.atomistic_dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
@@ -317,7 +334,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             for j in donors1.index:
                 c, r = j[0], j[1]
                 max_delta_r = 2
-                for delta_r in range(-1*max_delta_r, max_delta_r + 1):
+                for delta_r in range(-max_delta_r, max_delta_r + 1):
                     k = (c, r + delta_r, base2)
                     if k in acceptors1.index:
                         force.addExclusion(int(donors1.loc[j, 'donor_id']), int(acceptors1.loc[k, 'acceptor_id']))
@@ -331,7 +348,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         We accelerate by using (B1, S1, B2) atom group as either donor or acceptor. 
         The group is a donor if resid(B1) + 1 == resid(B2), and an acceptor if resid(B1) - 1 == resid(B2). 
         
-        Please ensure two neighboring chains in self.atoms do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -345,7 +362,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         print('Add DNA cross stackings.')
         cross_definition = self.cross_definition[self.cross_definition['DNA'] == self.dna_type].copy()
         cross_definition = cross_definition.set_index(['Base_d1', 'Base_a1', 'Base_a3'])
-        atoms = self.atoms.copy()
+        atoms = self.atomistic_dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
@@ -401,7 +418,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             max_delta_resSeq = 2
             for i in donors.index:
                 donor_id = int(donors.loc[i, 'donor_id'])
-                for delta_resSeq in range(-1*max_delta_resSeq, max_delta_resSeq + 1):
+                for delta_resSeq in range(-max_delta_resSeq, max_delta_resSeq + 1):
                     j = (i[0], i[1] + delta_resSeq, 'B')
                     if j in acceptors.index:
                         acceptor_id = int(acceptors.loc[j, 'acceptor_id'])
@@ -416,7 +433,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         This is the old method, which is slower, because each (B1, S1, B2) atom group acts as both donors and acceptors. 
         This method is still correct, so it can be used for verifications. 
         
-        Please ensure two neighboring chains in self.atoms do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -430,7 +447,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         print('Add DNA cross stackings.')
         cross_definition = self.cross_definition[self.cross_definition['DNA'] == self.dna_type].copy()
         cross_definition = cross_definition.set_index(['Base_d1', 'Base_a1', 'Base_a3'])
-        atoms = self.atoms.copy()
+        atoms = self.atomistic_dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
@@ -488,7 +505,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             max_delta_resSeq = 2
             for i in donors.index:
                 donor_id = int(donors.loc[i, 'donor_id'])
-                for delta_resSeq in range(-1*max_delta_resSeq, max_delta_resSeq + 1):
+                for delta_resSeq in range(-max_delta_resSeq, max_delta_resSeq + 1):
                     j = (i[0], i[1] + delta_resSeq, 'B')
                     if j in acceptors.index:
                         acceptor_id = int(acceptors.loc[j, 'acceptor_id'])
@@ -497,7 +514,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             self.system.addForce(force1)
             self.system.addForce(force2)
     
-    def add_all_vdwl(self, param_PP_MJ_path=f'{__location__}/parameters/pp_MJ.csv', cutoff_PD=1.425*unit.nanometer, 
+    def add_all_vdwl(self, param_PP_MJ_path=f'{__location__}/parameters/pp_MJ.csv', cutoff_PD=1.425 * unit.nanometer, 
                      force_group=11):
         """
         Add all the nonbonded Van der Waals interactions. 
@@ -506,7 +523,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         
         Parameters
         ----------
-        param_PP_MJ : str
+        param_PP_MJ_path : str
             Protein-protein MJ potential parameter file path. 
         
         cutoff_PD : Quantity
@@ -520,24 +537,9 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         param_PP_MJ = pd.read_csv(param_PP_MJ_path)
         force = functional_terms.all_smog_MJ_3spn2_term(self, param_PP_MJ, cutoff_PD, force_group)
         self.system.addForce(force)
-
-    # Added by lxc
-    def add_smog_vdwl(self, cutoff=1.6*unit.nanometer, force_group=11):
-        """
-        Add SMOG nonbonded Van der Waals interactions. 
-        
-        Parameters
-        ----------
-        force_group : int
-            Force group. 
-        
-        """
-        print('Add all nonbonded contact interactions.')
-        force = functional_terms.all_smog_NC_term(self, cutoff, force_group)
-        self.system.addForce(force)
-
-    def add_all_elec(self, salt_conc=150*unit.millimolar, temperature=300*unit.kelvin, 
-                     elec_DD_charge_scale=0.6, cutoff_DD=5*unit.nanometer, cutoff_PP_PD=3.141504539*unit.nanometer, 
+    
+    def add_all_elec(self, salt_conc=150 * unit.millimolar, temperature=300 * unit.kelvin, 
+                     elec_DD_charge_scale=0.6, cutoff_DD=5 * unit.nanometer, cutoff_PP_PD=3.141504539 * unit.nanometer, 
                      dielectric_PP_PD=78, force_group=12):
         """
         Add all the electrostatic interactions. 
@@ -567,85 +569,17 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         
         """
         print('Add all the electrostatic interactions.')
-        force = functional_terms.all_smog_3spn2_elec_term(self, salt_conc, temperature, elec_DD_charge_scale, 
-                                                          cutoff_DD, cutoff_PP_PD, dielectric_PP_PD, force_group)
+        force = functional_terms.all_smog_3spn2_elec_term(
+            mol=self,
+            salt_conc=salt_conc,
+            temperature=temperature,
+            elec_DD_charge_scale=elec_DD_charge_scale, 
+            cutoff_DD=cutoff_DD,
+            cutoff_PP_PD=cutoff_PP_PD,
+            dielectric_PP_PD=dielectric_PP_PD,
+            force_group=force_group,
+        )
         self.system.addForce(force)
         
-    def add_elec_switch(self, salt_conc=150.0*unit.millimolar, temperature=300.0*unit.kelvin, 
-                        cutoff1=1.2*unit.nanometer, cutoff2=1.5*unit.nanometer, switch_coeff=[1, 0, 0, -10, 15, -6], 
-                        add_native_pair_elec=True, force_group=6):
-        """
-        Add electrostatic interaction with switch function. 
-        
-        The switch function switches potential to zero within range cutoff1 < r <= cutoff2. 
-        
-        Parameters
-        ----------
-        salt_conc : Quantity
-            Monovalent salt concentration. 
-        
-        temperature : Quantity
-            Temperature. 
-        
-        cutoff1 : Quantity
-            Cutoff distance 1. 
-        
-        cutoff2 : Quantity
-            Cutoff distance 2. 
-        
-        switch_coeff : sequence-like
-            Switch function coefficients. 
-        
-        add_native_pair_elec : bool
-            Whether to add electrostatic interactions between native pairs. 
-        
-        force_group : int
-            Force group. 
-        
-        """
-        print('Add electrostatic interactions with distance-dependent dielectric and switch.')
-        charges = self.atoms['charge'].tolist()
-        force1 = functional_terms.ddd_dh_elec_switch_term(charges, self.exclusions, self.use_pbc, salt_conc, 
-                                                          temperature, cutoff1, cutoff2, switch_coeff, force_group)
-        self.system.addForce(force1)
-        if add_native_pair_elec and hasattr(self, 'native_pairs'):
-            print('Add electrostatic interactions between native pair atoms.')
-            df_charge_bonds = pd.DataFrame(columns=['a1', 'a2', 'q1', 'q2'])
-            for i, row in self.native_pairs.iterrows():
-                a1, a2 = int(row['a1']), int(row['a2'])
-                q1, q2 = float(charges[a1]), float(charges[a2])
-                if (q1 != 0) and (q2 != 0):
-                    df_charge_bonds.loc[len(df_charge_bonds.index)] = [a1, a2, q1, q2]
-            force2 = functional_terms.ddd_dh_elec_switch_bond_term(df_charge_bonds, self.use_pbc, salt_conc, 
-                                                                   temperature, cutoff1, cutoff2, switch_coeff, 
-                                                                   force_group)
-            self.system.addForce(force2)
-        else:
-            print('Do not add electrostatic interactions between native pair atoms.')   
+
     
-    def add_dh_elec(self, ldby=1*unit.nanometer, dielectric_water=80.0, cutoff=3.5*unit.nanometer, force_group=3):
-        """
-        Add Debye-Huckel electrostatic interactions. 
-        
-        Parameters
-        ----------
-        ldby : Quantity
-            Debye length. 
-        
-        dielectric_water : float or int
-            Dielectric constant of water. 
-        
-        cutoff : Quantity
-            Cutoff distance. 
-        
-        force_group : int
-            Force group. 
-        
-        """
-        print('Add Debye-Huckel electrostatic interactions.')
-        print(f'Set Debye length as {ldby.value_in_unit(unit.nanometer)} nm.')
-        print(f'Set water dielectric as {dielectric_water}.')
-        charges = self.atoms['charge'].tolist()
-        force = functional_terms.dh_elec_term(charges, self.exclusions, self.use_pbc, ldby, dielectric_water, 
-                                              cutoff, force_group)
-        self.system.addForce(force)

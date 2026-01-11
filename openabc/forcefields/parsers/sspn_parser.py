@@ -8,7 +8,7 @@ _smog_rna_nucleotide_mass_dict = dict(RA=135.13, RC=111.1, RG=151.13, RU=112.086
 
 _smog_rna_nucleotide_charge_dict = dict(RA=-1.0, RC=-1.0, RG=-1.0, RU=-1.0)
 
-class SSPNRNAParser(object):
+class SSPNParser(object):
     """
     SSPN RNA parser.
     """

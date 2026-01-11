@@ -2,4 +2,4 @@ from .hps_model import HPSModel
 from .moff_mrg_model import MOFFMRGModel
 from .mpipi_model import MpipiModel
 from .smog_3spn2_model import SMOG3SPN2Model
-from .smog_rna_sspn_model import SMOGSSPNModel
+from .sspn_model import SSPNModel

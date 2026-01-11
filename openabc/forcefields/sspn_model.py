@@ -4,7 +4,7 @@ try:
     import openmm.unit as unit
 except ImportError:
     import simtk.unit as unit
-from openabc.forcefields.cg_model import CGModel
+from openabc.forcefields.smog_3spn2_model import SMOG3SPN2Model
 from openabc.forcefields import functional_terms
 from openabc.forcefields.parameters import Mixin3SPN2ConfigParser
 from simtk.openmm import CustomCentroidBondForce
@@ -14,46 +14,13 @@ import os
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
 
-class SMOGSSPNModel(CGModel, Mixin3SPN2ConfigParser):
+class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
     """
-    The class for SMOG+3SPN2 model. 
-    To ensure this model works properly, please ensure two neighboring ssDNA chains do not share same chainID. 
+    The class for SSPN model. 
     """
-    def __init__(self, default_parse_config=True):
-        """
-        Initialize. 
-        
-        Parameters
-        ----------
-        dna_type : str
-            DNA type. This is related to force field parameters. 
-        
-        default_parse_config : bool
-            Whether to parse the default 3SPN2 configuration file. 
-        
-        """
-        self.atomistic_dataframe = None
-        self.exclusions = None
-        self.bonded_attr_names = ['sspn_bonds', 'sspn_angles', 'sspn_dihedrals', 'native_pairs', 'sspn_exclusions']
-        if default_parse_config:
-            # load parameters
-            self.parse_config_file()
-    
-    def append_mol(self, new_mol, verbose=False):
-        """
-        The method can append new molecules by concatenating atoms and bonded interaction information saved in dataframes. 
-        Please ensure two neighboring chains do not share chainID. 
-        
-        Parameters
-        ----------
-        new_mol : a consistent parser object or CG model object
-            The object of a new molecule including atom and bonded interaction information. 
-        
-        verbose : bool
-            Whether to report the appended attributes. 
-        
-        """
-        super().append_mol(new_mol, verbose)
+    def __init__(self, dna_type='B_curved', default_parse_config=False):
+        super().__init__(dna_type=dna_type, default_parse_config=default_parse_config)
+        self.bonded_attr_names += ['sspn_bonds', 'sspn_angles', 'sspn_dihedrals', 'sspn_exclusions']
 
     def add_sspn_bonds(self, force_group=1):
         """
@@ -116,69 +83,6 @@ class SMOGSSPNModel(CGModel, Mixin3SPN2ConfigParser):
             print('Add sspn dihedrals.')
             force = functional_terms.periodic_dihedral_term(self.sspn_dihedrals, self.use_pbc, force_group)
             self.system.addForce(force)
-
-    def add_native_pairs(self, force_group=4):
-        """
-        Add native pairs. 
-        
-        Parameters
-        ----------
-        force_group : int
-            Force group.
-        
-        """
-        if hasattr(self, 'native_pairs'):
-            print('Add native pairs.')
-            force = functional_terms.native_pair_gaussian_term(self.native_pairs, self.use_pbc, force_group)
-            self.system.addForce(force)
-   
-    def add_constant_force(self, constant_force, force_group=13):
-        """
-        Add constant force between ends. 
-        
-        Parameters
-        ----------
-        constant_force : float
-            Magnitude of force desired
-
-        force_group : int
-            Force group.
-        
-        """
-        constant_force_converted = constant_force.value_in_unit(unit.kilojoule / unit.nanometer) * unit.AVOGADRO_CONSTANT_NA
-        constant_force_val = constant_force_converted.value_in_unit(constant_force_val.unit)
-        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
-        force = CustomCentroidBondForce(2, "force * distance(g1, g2)")
-        force.addPerBondParameter("force")
-        g1 = force.addGroup([first_residue_index])
-        g2 = force.addGroup([last_residue_index])
-        force.addBond([g1, g2], [-1*constant_force_val], force_group)
-        print('Add constant force.')
-        self.system.addForce(force)
-
-    def add_force_extension(self, k, force_group=14):
-        """
-        Add constant force between ends. 
-        
-        Parameters
-        ----------
-        k : float
-            Spring constant for simulated optical traps at each end of the system
-            
-        force_group : int
-            Force group.
-        
-        """
-        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
-        k_val = k.in_units_of(unit.kilojoule / unit.nanometer **2) * unit.AVOGADRO_CONSTANT_NA
-        force = CustomBondForce("0.5*k*(r-r0)^2")
-        force.addPerBondParameter("k")
-        force.addGlobalParameter("r0", 0.0)
-        force.addBond(first_residue_index, last_residue_index, [k_val])
-        force.setUsesPeriodicBoundaryConditions(True)
-        force.setForceGroup(force_group)
-        print('Add force-extension.')
-        self.system.addForce(force)
         
     def add_smog_vdwl(self, cutoff=1.6*unit.nanometer, force_group=11):
         """
@@ -244,4 +148,52 @@ class SMOGSSPNModel(CGModel, Mixin3SPN2ConfigParser):
                                                                    force_group)
             self.system.addForce(force2)
         else:
-            print('Do not add electrostatic interactions between native pair atoms.')   
+            print('Do not add electrostatic interactions between native pair atoms.')
+
+    def add_constant_force(self, constant_force, force_group=13):
+        """
+        Add constant force between ends. 
+        
+        Parameters
+        ----------
+        constant_force : float
+            Magnitude of force desired
+
+        force_group : int
+            Force group.
+        
+        """
+        constant_force_converted = constant_force.value_in_unit(unit.kilojoule / unit.nanometer) * unit.AVOGADRO_CONSTANT_NA
+        constant_force_val = constant_force_converted.value_in_unit(constant_force_val.unit)
+        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
+        force = CustomCentroidBondForce(2, "force * distance(g1, g2)")
+        force.addPerBondParameter("force")
+        g1 = force.addGroup([first_residue_index])
+        g2 = force.addGroup([last_residue_index])
+        force.addBond([g1, g2], [-1*constant_force_val], force_group)
+        print('Add constant force.')
+        self.system.addForce(force)
+
+    def add_force_extension(self, k, force_group=14):
+        """
+        Add constant force between ends. 
+        
+        Parameters
+        ----------
+        k : float
+            Spring constant for simulated optical traps at each end of the system
+            
+        force_group : int
+            Force group.
+        
+        """
+        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
+        k_val = k.in_units_of(unit.kilojoule / unit.nanometer **2) * unit.AVOGADRO_CONSTANT_NA
+        force = CustomBondForce("0.5*k*(r-r0)^2")
+        force.addPerBondParameter("k")
+        force.addGlobalParameter("r0", 0.0)
+        force.addBond(first_residue_index, last_residue_index, [k_val])
+        force.setUsesPeriodicBoundaryConditions(True)
+        force.setForceGroup(force_group)
+        print('Add force-extension.')
+        self.system.addForce(force)
