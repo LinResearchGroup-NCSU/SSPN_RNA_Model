@@ -42,7 +42,7 @@ class MRGdsDNAParser(object):
         
         """
         self.pdb = cg_pdb
-        self.atoms = helper_functions.parse_pdb(self.pdb)
+        self.atoms = helper_functions.get_dataframe_from_pdb(self.pdb)
         # check if all the atoms are CG nucleotide atoms
         atom_names = self.atoms['name']
         assert (self.atoms['resname'].isin(_dna_nucleotides).all() and atom_names.eq('DN').all())

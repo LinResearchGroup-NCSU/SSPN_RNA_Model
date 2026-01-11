@@ -37,7 +37,7 @@ class MpipiProteinParser(object):
         
         """
         self.pdb = ca_pdb
-        self.atoms = helper_functions.parse_pdb(ca_pdb)
+        self.atoms = helper_functions.get_dataframe_from_pdb(ca_pdb)
         # check if all the atoms are protein CA atoms
         assert ((self.atoms['resname'].isin(_amino_acids)).all() and self.atoms['name'].eq('CA').all())
         if default_parse:
@@ -124,7 +124,7 @@ class MpipiRNAParser(object):
         
         """
         self.pdb = cg_pdb
-        self.atoms = helper_functions.parse_pdb(self.pdb)
+        self.atoms = helper_functions.get_dataframe_from_pdb(self.pdb)
         # check if all the atoms are CG nucleotide atoms
         atom_names = self.atoms['name']
         assert (self.atoms['resname'].isin(_rna_nucleotides).all() and atom_names.eq('RN').all())

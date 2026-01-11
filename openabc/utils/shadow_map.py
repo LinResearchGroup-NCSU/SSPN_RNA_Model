@@ -155,7 +155,7 @@ def light_is_blocked(d12, d13, d23, r2, r3):
     return flag
 
 
-def find_res_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radius=0.1, bonded_radius=0.05, cutoff=0.6, box=None, 
+def find_res_pairs_from_atomistic_pdb(atomistic_pdb, frame=0, radius=0.1, bonded_radius=0.05, cutoff=0.6, box=None, 
                                       use_pbc=False):
     '''
     Find native pairs between residues following the shadow algorithm.
@@ -197,10 +197,8 @@ def find_res_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radi
         Pandas DataFrame including atom information from file `atomistic_pdb`. 
     
     '''
-    if(cut_pdb==None):
-        traj = mdtraj.load_pdb(atomistic_pdb)
-    else:
-        traj = mdtraj.load_pdb(cut_pdb)
+
+    traj = mdtraj.load_pdb(atomistic_pdb)
     top = traj.topology
     n_atoms = top.n_atoms
     df_atoms, _bonds = top.to_dataframe()
@@ -284,8 +282,7 @@ def find_res_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radi
     res_pairs = np.array(sorted(res_pairs))
     return res_pairs, df_atoms
 
-# following function changed by Thomas Thornton to be compatible with RNA 
-def find_cg_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radius=0.1, bonded_radius=0.05, cutoff=0.6, mol_type='protein', box=None, 
+def find_cg_pairs_from_atomistic_pdb(atomistic_pdb, frame=0, radius=0.1, bonded_radius=0.05, cutoff=0.6, mol_type='protein', box=None, 
                                      use_pbc=False):
     '''
     Find protein CA atom pairs whose residues are in contact, or RNA P atom pairs whose residues are in contact.
@@ -325,7 +322,7 @@ def find_cg_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radiu
         Pandas DataFrame including CA atom pair indices and distances. 
     
     '''
-    res_pairs, df_atoms = find_res_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb, frame, radius, bonded_radius, cutoff, 
+    res_pairs, df_atoms = find_res_pairs_from_atomistic_pdb(atomistic_pdb, frame, radius, bonded_radius, cutoff, 
                                                             box, use_pbc)
     # pick out CA/P atoms for each residue
     dict_res_CG = {}
@@ -349,7 +346,7 @@ def find_cg_pairs_from_atomistic_pdb(atomistic_pdb, cut_pdb=None, frame=0, radiu
     if len(cg_atom_pairs) == 0:
         return df_cg_pairs
     cg_atom_pairs = np.array(cg_atom_pairs)
-    traj = mdtraj.load_pdb(cut_pdb)
+    traj = mdtraj.load_pdb(atomistic_pdb)
     df_cg_pairs['mu'] = mdtraj.compute_distances(traj, cg_atom_pairs, use_pbc)[frame]
     return df_cg_pairs
 

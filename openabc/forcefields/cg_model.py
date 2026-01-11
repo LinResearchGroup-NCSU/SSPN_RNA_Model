@@ -28,7 +28,7 @@ class CGModel(object):
         """
         Initialize. 
         """
-        self.atoms = None
+        self.atomistic_dataframe = None
         self.init_coord = None
         
     def append_mol(self, new_mol, verbose=False):
@@ -44,17 +44,17 @@ class CGModel(object):
             Whether to report the appended attributes. 
         
         """
-        new_atoms = new_mol.atoms.copy()
+        new_atoms = new_mol.atomistic_dataframe.copy()
         if hasattr(self, 'atoms'):
-            if self.atoms is None:
+            if self.atomistic_dataframe is None:
                 add_index = 0
-                self.atoms = new_atoms
+                self.atomistic_dataframe = new_atoms
             else:
-                add_index = len(self.atoms.index)
-                self.atoms = pd.concat([self.atoms, new_atoms], ignore_index=True)
+                add_index = len(self.atomistic_dataframe.index)
+                self.atomistic_dataframe = pd.concat([self.atomistic_dataframe, new_atoms], ignore_index=True)
         else:
             add_index = 0
-            self.atoms = new_atoms
+            self.atomistic_dataframe = new_atoms
         for each_attr_name in self.bonded_attr_names:
             if verbose:
                 print(f'Append attribute: {each_attr_name}. ')
@@ -89,7 +89,7 @@ class CGModel(object):
         
         """
         # do not write charge due to pdb space limit
-        atoms = self.atoms.copy()
+        atoms = self.atomistic_dataframe.copy()
         atoms.loc[:, 'charge'] = ''
         if reset_serial:
             atoms['serial'] = list(range(1, len(atoms.index) + 1))
@@ -129,7 +129,7 @@ class CGModel(object):
             box_vec_b = np.array([0, box_b, 0])*unit.nanometer
             box_vec_c = np.array([0, 0, box_c])*unit.nanometer
             self.system.setDefaultPeriodicBoxVectors(box_vec_a, box_vec_b, box_vec_c)
-        mass = self.atoms['mass'].tolist()
+        mass = self.atomistic_dataframe['mass'].tolist()
         for each in mass:
             self.system.addParticle(each)
         if remove_cmmotion:
@@ -155,7 +155,7 @@ class CGModel(object):
         
         """
         rigid_body_index_dict = {}
-        for i in range(len(self.atoms.index)):
+        for i in range(len(self.atomistic_dataframe.index)):
             rigid_body_index_dict[i] = None
         for i in range(len(rigid_bodies)):
             for j in rigid_bodies[i]:

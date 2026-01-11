@@ -21,7 +21,7 @@ Lu, Wei, et al. "OpenAWSEM with Open3SPN2: A fast, flexible, and accessible fram
 
 _nucleotides = _dna_nucleotides + _rna_nucleotides
 
-def parse_pdb(pdb_file, mol_type='protein', write_output=False, output_pdb=None, unaltered=True):
+def get_dataframe_from_pdb(pdb_file):
     """
     Load pdb file as pandas dataframe.
     
@@ -61,36 +61,8 @@ def parse_pdb(pdb_file, mol_type='protein', write_output=False, output_pdb=None,
                            'resname', 'chainID', 'resSeq', 'iCode',
                            'x', 'y', 'z', 'occupancy', 'tempFactor',
                            'element', 'charge']]
-    if unaltered:
-        # added by Thomas Thornton:
-        if(mol_type=='protein'):
-            ca_atoms = pdb_atoms[(pdb_atoms['resname'].isin(_amino_acids)) & (pdb_atoms['name'] == 'CA')]
-            first_residue_with_ca = ca_atoms.iloc[0]['resSeq']
-
-            # Filter out all residues before the first residue with a CA atom
-            pdb_atoms = pdb_atoms[pdb_atoms['resSeq'] >= first_residue_with_ca]
-
-            # Make sure all atoms are from the protein
-            pdb_atoms = pdb_atoms[pdb_atoms['resname'].isin(_amino_acids)]
-        elif(mol_type=='rna'):
-            p_atoms = pdb_atoms[(pdb_atoms['resname'].isin(_rna_nucleotides_unaltered)) & (pdb_atoms['name'] == 'P')]
-            first_residue_with_p = p_atoms.iloc[0]['resSeq']
-
-            # Filter out all residues before the first residue with a phosphorus atom
-            pdb_atoms = pdb_atoms[pdb_atoms['resSeq'] >= first_residue_with_p]
-
-            # Make sure all atoms are from the RNA
-            pdb_atoms = pdb_atoms[pdb_atoms['resname'].isin(_rna_nucleotides_unaltered)]
-        
-            # Adjust various columns:
-            pdb_atoms['resSeq'] = pdb_atoms['resSeq'].rank(method='dense').astype(int) # starts at 1
-            pdb_atoms['serial'] = list(range(1, len(pdb_atoms.index) + 1)) # starts at 1
-            pdb_atoms.reset_index(drop=True, inplace=True) # starts at 0
-
-    if(write_output):
-        write_pdb(pdb_atoms, output_pdb)
     return pdb_atoms
-
+    
 def write_pdb(pdb_atoms, pdb_file, write_TER=False):
     """
     Write pandas dataframe to pdb file. 
@@ -123,8 +95,7 @@ def write_pdb(pdb_atoms, pdb_file, write_TER=False):
             pdb.write(pdb_line + '\n')
         pdb.write('END\n')
 
-#edited version of atomistic_pdb_to_ca_pdb by Thomas Thornton to include RNA phosphorous coarse graining
-def atomistic_pdb_to_cg_pdb(atomistic_pdb, cg_pdb, cut_pdb, mol_type='protein', cg_type='phosphorus',write_TER=False):
+def atomistic_pdb_to_p_pdb(atomistic_pdb, cg_pdb, cg_type, write_TER=False):
     """
     Convert atomistic pdb to CA/phosphorus pdb. 
     
@@ -143,48 +114,33 @@ def atomistic_pdb_to_cg_pdb(atomistic_pdb, cg_pdb, cut_pdb, mol_type='protein', 
         Whether to write TER between two chains. 
     
     """
-    atomistic_pdb_atoms = parse_pdb(atomistic_pdb, mol_type, write_output=True, output_pdb=cut_pdb)
-    cg_pdb_atoms = pd.DataFrame(columns=atomistic_pdb_atoms.columns)
-    if mol_type == 'protein':
-        for i, row in atomistic_pdb_atoms.iterrows():
-            if (row['resname'] in _amino_acids) and (row['name'] == 'CA'):
-                cg_pdb_atoms.loc[len(cg_pdb_atoms.index)] = row
-    elif mol_type == 'rna':
-        if cg_type == 'gc':
-            rna_atoms = atomistic_pdb_atoms.query('resname in @_rna_nucleotides_unaltered')
-            grouped = rna_atoms.groupby(['chainID', 'resSeq'])
-            for (chainID, resSeq), group in grouped:
-                mean_coords = group[['x', 'y', 'z']].mean()
-                resname_fixed_row = group.iloc[0].copy()
-                resname_fixed_row.update(mean_coords)
-                resname_fixed_row['name'] = 'NR'
-                resname_fixed_row['resname'] = 'R' + group.iloc[0]['resname']
-                resname_fixed_row['element'] = ''
+    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    cg_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
+    if cg_type == 'gc':
+        rna_atoms = atomistic_dataframe.query('resname in @_rna_nucleotides_unaltered')
+        grouped = rna_atoms.groupby(['chainID', 'resSeq'])
+        for (chainID, resSeq), group in grouped:
+            mean_coords = group[['x', 'y', 'z']].mean()
+            resname_fixed_row = group.iloc[0].copy()
+            resname_fixed_row.update(mean_coords)
+            resname_fixed_row['name'] = 'NR'
+            resname_fixed_row['resname'] = 'R' + group.iloc[0]['resname']
+            resname_fixed_row['element'] = ''
+            cg_pdb_atoms.loc[len(cg_pdb_atoms.index)] = resname_fixed_row
+    
+    elif cg_type=='phosphorus':
+        for i, row in atomistic_dataframe.iterrows():
+            if row['resname'] in _rna_nucleotides_unaltered and row['name'] == 'P':
+                resname_fixed_row = row.copy()
+                new_resname = ('R' + row['resname'].strip()).ljust(3)
+                resname_fixed_row['resname'] = new_resname
                 cg_pdb_atoms.loc[len(cg_pdb_atoms.index)] = resname_fixed_row
-        
-        elif cg_type=='phosphorus':
-            for i, row in atomistic_pdb_atoms.iterrows():
-                if row['resname'] in _rna_nucleotides_unaltered and row['name'] == 'P':
-                    # Copy the current row to avoid modifying the original row
-                    resname_fixed_row = row.copy()
-
-                    # Prepend 'R' and ensure the length is exactly 3 characters
-                    new_resname = ('R' + row['resname'].strip()).ljust(3)
-
-                    # Update the 'resname' column of the copied row
-                    resname_fixed_row['resname'] = new_resname
-
-                    # Add the modified row to the cg_pdb_atoms DataFrame
-                    cg_pdb_atoms.loc[len(cg_pdb_atoms.index)] = resname_fixed_row
 
     cg_pdb_atoms['resSeq'] = list(range(1, len(cg_pdb_atoms.index) + 1))
     cg_pdb_atoms['serial'] = list(range(1, len(cg_pdb_atoms.index) + 1))
-
-    cg_pdb_atoms.loc[:, 'charge'] = '' # remove charge
-    
+    cg_pdb_atoms.loc[:, 'charge'] = ''
     write_pdb(cg_pdb_atoms, cg_pdb, write_TER)
 
-# This is the original, unedited version of the function above. I left it here so the other parsers still work.
 def atomistic_pdb_to_ca_pdb(atomistic_pdb, ca_pdb, write_TER=False):
     """
     Convert atomistic pdb to protein CA pdb. 
@@ -201,9 +157,9 @@ def atomistic_pdb_to_ca_pdb(atomistic_pdb, ca_pdb, write_TER=False):
         Whether to write TER between two chains. 
     
     """
-    atomistic_pdb_atoms = parse_pdb(atomistic_pdb)
-    ca_pdb_atoms = pd.DataFrame(columns=atomistic_pdb_atoms.columns)
-    for i, row in atomistic_pdb_atoms.iterrows():
+    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    ca_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
+    for i, row in atomistic_dataframe.iterrows():
         if (row['resname'] in _amino_acids) and (row['name'] == 'CA'):
             ca_pdb_atoms.loc[len(ca_pdb_atoms.index)] = row
     ca_pdb_atoms['serial'] = list(range(1, len(ca_pdb_atoms.index) + 1))
@@ -228,15 +184,15 @@ def atomistic_pdb_to_nucleotide_pdb(atomistic_pdb, cg_nucleotide_pdb, write_TER=
         Whether to write TER between two chains. 
     
     """
-    atomistic_pdb_atoms = parse_pdb(atomistic_pdb)
-    atomistic_pdb_atoms = atomistic_pdb_atoms.loc[atomistic_pdb_atoms['resname'].isin(_nucleotides)].copy()
-    atomistic_pdb_atoms.index = list(range(len(atomistic_pdb_atoms.index)))
-    chainID = atomistic_pdb_atoms['chainID']
-    resSeq = atomistic_pdb_atoms['resSeq']
-    atomistic_pdb_atoms.index = chainID.astype(str) + '_' + resSeq.astype(str)
-    cg_nucleotide_pdb_atoms = pd.DataFrame(columns=atomistic_pdb_atoms.columns)
-    for each in atomistic_pdb_atoms.index.drop_duplicates():
-        residue_atoms = atomistic_pdb_atoms.loc[each]
+    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    atomistic_dataframe = atomistic_dataframe.loc[atomistic_dataframe['resname'].isin(_nucleotides)].copy()
+    atomistic_dataframe.index = list(range(len(atomistic_dataframe.index)))
+    chainID = atomistic_dataframe['chainID']
+    resSeq = atomistic_dataframe['resSeq']
+    atomistic_dataframe.index = chainID.astype(str) + '_' + resSeq.astype(str)
+    cg_nucleotide_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
+    for each in atomistic_dataframe.index.drop_duplicates():
+        residue_atoms = atomistic_dataframe.loc[each]
         coord = np.mean(residue_atoms[['x', 'y', 'z']].to_numpy(), axis=0)
         row = residue_atoms.iloc[0].copy()
         row[['x', 'y', 'z']] = coord

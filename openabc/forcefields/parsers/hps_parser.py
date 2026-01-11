@@ -33,7 +33,7 @@ class HPSParser(object):
         
         """
         self.pdb = ca_pdb
-        self.atoms = helper_functions.parse_pdb(ca_pdb)
+        self.atoms = helper_functions.get_dataframe_from_pdb(ca_pdb)
         # check if all the atoms are protein CA atoms
         assert ((self.atoms['resname'].isin(_amino_acids)).all() and self.atoms['name'].eq('CA').all())
         if default_parse:

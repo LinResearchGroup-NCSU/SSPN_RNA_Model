@@ -11,7 +11,7 @@ import os
 import argparse
 import subprocess
 import warnings
-from openabc.utils.helper_functions import parse_pdb, write_pdb
+from openabc.utils.helper_functions import get_dataframe_from_pdb, write_pdb
 
 __location__ = os.path.dirname(os.path.abspath(__file__))
 
@@ -60,7 +60,7 @@ def split_protein(input_pdbfile, num_chains, num_residues, output_path):
         The folder where user wants to save output pdb files.  
            
     """
-    pdb = parse_pdb(input_pdbfile)
+    pdb = get_dataframe_from_pdb(input_pdbfile)
     assert len(num_chains) == len(num_residues)
     protein_types = len(num_chains)
     current_index = 0

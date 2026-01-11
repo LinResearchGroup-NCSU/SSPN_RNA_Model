@@ -61,8 +61,8 @@ def insert_molecules(new_pdb, output_pdb, n_mol, mol_type='protein', radius=0.5,
     if existing_pdb is None:
         atoms = pd.DataFrame()
     else:
-        atoms = helper_functions.parse_pdb(existing_pdb, mol_type)
-    new_atoms = helper_functions.parse_pdb(new_pdb, mol_type, unaltered=False)
+        atoms = helper_functions.get_dataframe_from_pdb(existing_pdb)
+    new_atoms = helper_functions.get_dataframe_from_pdb(new_pdb, mol_type)
     new_coord = new_atoms[['x', 'y', 'z']].to_numpy()
     new_coord -= np.mean(new_coord, axis=0)
     count_n_mol = 0
