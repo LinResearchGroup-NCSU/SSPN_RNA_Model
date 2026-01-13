@@ -38,8 +38,9 @@ class SMOGParser(object):
         """
         self.atomistic_pdb = atomistic_pdb
         self.cg_pdb = ca_pdb
+        self.cg_dataframe = get_dataframe_from_pdb(ca_pdb)
         # check if all the atoms are protein CA atoms
-        assert ((self.atomistic_dataframe['resname'].isin(_amino_acids)).all() and self.atomistic_dataframe['name'].eq('CA').all())
+        assert ((self.cg_dataframe['resname'].isin(_amino_acids)).all() and self.cg_dataframe['name'].eq('CA').all())
         if default_parse:
             print('Parse configuration with default settings.')
             self.parse_mol()
@@ -160,22 +161,22 @@ class SMOGParser(object):
         """
         # set bonds, angles, and dihedrals
         bonds, angles, dihedrals = [], [], []
-        n_atoms = len(self.atomistic_dataframe.index)
+        n_atoms = len(self.cg_dataframe.index)
         for atom1 in range(n_atoms):
-            chain1 = self.atomistic_dataframe.loc[atom1, 'chainID']
+            chain1 = self.cg_dataframe.loc[atom1, 'chainID']
             if atom1 < n_atoms - 1:
                 atom2 = atom1 + 1
-                chain2 = self.atomistic_dataframe.loc[atom2, 'chainID']
+                chain2 = self.cg_dataframe.loc[atom2, 'chainID']
                 if chain1 == chain2:
                     bonds.append([atom1, atom2])
             if atom1 < n_atoms - 2:
                 atom3 = atom1 + 2
-                chain3 = self.atomistic_dataframe.loc[atom3, 'chainID']
+                chain3 = self.cg_dataframe.loc[atom3, 'chainID']
                 if (chain1 == chain2) and (chain1 == chain3):
                     angles.append([atom1, atom2, atom3])
             if atom1 < n_atoms - 3:
                 atom4 = atom1 + 3
-                chain4 = self.atomistic_dataframe.loc[atom4, 'chainID']
+                chain4 = self.cg_dataframe.loc[atom4, 'chainID']
                 if (chain1 == chain2) and (chain1 == chain3) and (chain1 == chain4):
                     dihedrals.append([atom1, atom2, atom3, atom4])
         bonds, angles, dihedrals = np.array(bonds), np.array(angles), np.array(dihedrals)
@@ -217,7 +218,7 @@ class SMOGParser(object):
             exclude_native_pairs=exclude_native_pairs,
         ) 
         # set mass and charge
-        for i, row in self.atomistic_dataframe.iterrows():
-            self.atomistic_dataframe.loc[i, 'mass'] = mass_dict[row['resname']]
-            self.atomistic_dataframe.loc[i, 'charge'] = charge_dict[row['resname']]
+        for i, row in self.cg_dataframe.iterrows():
+            self.cg_dataframe.loc[i, 'mass'] = mass_dict[row['resname']]
+            self.cg_dataframe.loc[i, 'charge'] = charge_dict[row['resname']]
 
