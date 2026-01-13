@@ -131,7 +131,7 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
         
         """
         print('Add electrostatic interactions with distance-dependent dielectric and switch.')
-        charges = self.atomistic_dataframe['charge'].tolist()
+        charges = self.dataframe['charge'].tolist()
         force1 = functional_terms.ddd_dh_elec_switch_term(charges, self.exclusions, self.use_pbc, salt_conc, 
                                                           temperature, cutoff1, cutoff2, switch_coeff, force_group)
         self.system.addForce(force1)
@@ -165,7 +165,7 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
         """
         constant_force_converted = constant_force.value_in_unit(unit.kilojoule / unit.nanometer) * unit.AVOGADRO_CONSTANT_NA
         constant_force_val = constant_force_converted.value_in_unit(constant_force_val.unit)
-        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
+        first_residue_index, last_residue_index = self.dataframe.index[0], self.dataframe.index[-1]
         force = CustomCentroidBondForce(2, "force * distance(g1, g2)")
         force.addPerBondParameter("force")
         g1 = force.addGroup([first_residue_index])
@@ -187,7 +187,7 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
             Force group.
         
         """
-        first_residue_index, last_residue_index = self.atomistic_dataframe.index[0], self.atomistic_dataframe.index[-1]
+        first_residue_index, last_residue_index = self.dataframe.index[0], self.dataframe.index[-1]
         k_val = k.in_units_of(unit.kilojoule / unit.nanometer **2) * unit.AVOGADRO_CONSTANT_NA
         force = CustomBondForce("0.5*k*(r-r0)^2")
         force.addPerBondParameter("k")

@@ -114,10 +114,10 @@ def atomistic_pdb_to_p_pdb(atomistic_pdb, cg_pdb, cg_type, write_TER=False):
         Whether to write TER between two chains. 
     
     """
-    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
-    cg_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
+    dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    cg_pdb_atoms = pd.DataFrame(columns=dataframe.columns)
     if cg_type == 'gc':
-        rna_atoms = atomistic_dataframe.query('resname in @_rna_nucleotides_unaltered')
+        rna_atoms = dataframe.query('resname in @_rna_nucleotides_unaltered')
         grouped = rna_atoms.groupby(['chainID', 'resSeq'])
         for (chainID, resSeq), group in grouped:
             mean_coords = group[['x', 'y', 'z']].mean()
@@ -129,7 +129,7 @@ def atomistic_pdb_to_p_pdb(atomistic_pdb, cg_pdb, cg_type, write_TER=False):
             cg_pdb_atoms.loc[len(cg_pdb_atoms.index)] = resname_fixed_row
     
     elif cg_type=='phosphorus':
-        for i, row in atomistic_dataframe.iterrows():
+        for i, row in dataframe.iterrows():
             if row['resname'] in _rna_nucleotides_unaltered and row['name'] == 'P':
                 resname_fixed_row = row.copy()
                 new_resname = ('R' + row['resname'].strip()).ljust(3)
@@ -157,9 +157,9 @@ def atomistic_pdb_to_ca_pdb(atomistic_pdb, ca_pdb, write_TER=False):
         Whether to write TER between two chains. 
     
     """
-    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
-    ca_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
-    for i, row in atomistic_dataframe.iterrows():
+    dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    ca_pdb_atoms = pd.DataFrame(columns=dataframe.columns)
+    for i, row in dataframe.iterrows():
         if (row['resname'] in _amino_acids) and (row['name'] == 'CA'):
             ca_pdb_atoms.loc[len(ca_pdb_atoms.index)] = row
     ca_pdb_atoms['serial'] = list(range(1, len(ca_pdb_atoms.index) + 1))
@@ -184,15 +184,15 @@ def atomistic_pdb_to_nucleotide_pdb(atomistic_pdb, cg_nucleotide_pdb, write_TER=
         Whether to write TER between two chains. 
     
     """
-    atomistic_dataframe = get_dataframe_from_pdb(atomistic_pdb)
-    atomistic_dataframe = atomistic_dataframe.loc[atomistic_dataframe['resname'].isin(_nucleotides)].copy()
-    atomistic_dataframe.index = list(range(len(atomistic_dataframe.index)))
-    chainID = atomistic_dataframe['chainID']
-    resSeq = atomistic_dataframe['resSeq']
-    atomistic_dataframe.index = chainID.astype(str) + '_' + resSeq.astype(str)
-    cg_nucleotide_pdb_atoms = pd.DataFrame(columns=atomistic_dataframe.columns)
-    for each in atomistic_dataframe.index.drop_duplicates():
-        residue_atoms = atomistic_dataframe.loc[each]
+    dataframe = get_dataframe_from_pdb(atomistic_pdb)
+    dataframe = dataframe.loc[dataframe['resname'].isin(_nucleotides)].copy()
+    dataframe.index = list(range(len(dataframe.index)))
+    chainID = dataframe['chainID']
+    resSeq = dataframe['resSeq']
+    dataframe.index = chainID.astype(str) + '_' + resSeq.astype(str)
+    cg_nucleotide_pdb_atoms = pd.DataFrame(columns=dataframe.columns)
+    for each in dataframe.index.drop_duplicates():
+        residue_atoms = dataframe.loc[each]
         coord = np.mean(residue_atoms[['x', 'y', 'z']].to_numpy(), axis=0)
         row = residue_atoms.iloc[0].copy()
         row[['x', 'y', 'z']] = coord

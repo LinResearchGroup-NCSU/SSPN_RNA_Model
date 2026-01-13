@@ -31,7 +31,7 @@ class SSPNParser(object):
         
         self.atomistic_pdb = atomistic_pdb
         self.cg_pdb = cg_pdb
-        self.atomistic_dataframe = helper_functions.get_dataframe_from_pdb(cg_pdb)
+        self.dataframe = helper_functions.get_dataframe_from_pdb(cg_pdb)
         if default_parse:
             print('Parse configuration with default settings.')
             self.parse_mol()
@@ -155,22 +155,22 @@ class SSPNParser(object):
 
         # set bonds, angles, and dihedrals
         bonds, angles, dihedrals = [], [], []
-        n_atoms = len(self.atomistic_dataframe.index)
+        n_atoms = len(self.dataframe.index)
         for atom1 in range(n_atoms):
-            chain1 = self.atomistic_dataframe.loc[atom1, 'chainID']
+            chain1 = self.dataframe.loc[atom1, 'chainID']
             if atom1 < n_atoms - 1:
                 atom2 = atom1 + 1
-                chain2 = self.atomistic_dataframe.loc[atom2, 'chainID']
+                chain2 = self.dataframe.loc[atom2, 'chainID']
                 if chain1 == chain2:
                     bonds.append([atom1, atom2])
             if atom1 < n_atoms - 2:
                 atom3 = atom1 + 2
-                chain3 = self.atomistic_dataframe.loc[atom3, 'chainID']
+                chain3 = self.dataframe.loc[atom3, 'chainID']
                 if (chain1 == chain2) and (chain1 == chain3):
                     angles.append([atom1, atom2, atom3])
             if atom1 < n_atoms - 3:
                 atom4 = atom1 + 3
-                chain4 = self.atomistic_dataframe.loc[atom4, 'chainID']
+                chain4 = self.dataframe.loc[atom4, 'chainID']
                 if (chain1 == chain2) and (chain1 == chain3) and (chain1 == chain4):
                     dihedrals.append([atom1, atom2, atom3, atom4])
         bonds, angles, dihedrals = np.array(bonds), np.array(angles), np.array(dihedrals)
@@ -199,9 +199,9 @@ class SSPNParser(object):
         # set exclusions
         self.parse_exclusions(exclude12, exclude13, exclude14, exclude_native_pairs) 
         # set mass and charge
-        for i, row in self.atomistic_dataframe.iterrows():
-            self.atomistic_dataframe.loc[i, 'mass'] = mass_dict[row['resname']]
-            self.atomistic_dataframe.loc[i, 'charge'] = charge_dict[row['resname']]
+        for i, row in self.dataframe.iterrows():
+            self.dataframe.loc[i, 'mass'] = mass_dict[row['resname']]
+            self.dataframe.loc[i, 'charge'] = charge_dict[row['resname']]
 
 
 

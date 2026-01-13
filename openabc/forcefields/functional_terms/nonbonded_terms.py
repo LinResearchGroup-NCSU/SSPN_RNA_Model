@@ -382,7 +382,7 @@ def all_smog_MJ_3spn2_term(mol, param_PP_MJ, cutoff_PD=1.425*unit.nanometer, for
     vdwl.addTabulatedFunction('cutoff_map', mm.Discrete2DFunction(n_atom_types, n_atom_types, cutoff_map))
     vdwl.addPerParticleParameter('atom_type')
     # add atom type
-    for _, row in mol.atomistic_dataframe.iterrows():
+    for _, row in mol.dataframe.iterrows():
         resname = row['resname']
         name = row['name']
         if (resname in _amino_acids) and (name == 'CA'):
@@ -419,7 +419,7 @@ def all_smog_NC_term(mol, cutoff=1.6*unit.nanometer, force_group=11):
     
     vdwl.addPerParticleParameter('')       
     # add atom type
-    for _, row in mol.atomistic_dataframe.iterrows():
+    for _, row in mol.dataframe.iterrows():
         resname = row['resname']
         name = row['name']
         if (resname in _amino_acids) and (name == 'CA'):
@@ -510,7 +510,7 @@ def all_smog_3spn2_elec_term(mol, salt_conc=150*unit.millimolar, temperature=300
     elec.addTabulatedFunction('cutoff_map', mm.Discrete2DFunction(n_atom_types, n_atom_types, cutoff_map))
     elec.addPerParticleParameter('cg_atom_type')
     # add atom type
-    for _, row in mol.atomistic_dataframe.iterrows():
+    for _, row in mol.dataframe.iterrows():
         resname = row['resname']
         name = row['name']
         if (resname in ['ARG', 'LYS']) and (name == 'CA'):

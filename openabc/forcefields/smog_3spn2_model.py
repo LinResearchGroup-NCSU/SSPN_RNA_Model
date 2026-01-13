@@ -32,7 +32,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
             Whether to parse the default 3SPN2 configuration file. 
         
         """
-        self.atomistic_dataframe = None
+        self.dataframe = None
         self.dna_exclusions = None
         self.exclusions = None
         # note dna_exclusions and exclusions are not included in self.bonded_attr_names
@@ -78,7 +78,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         The code should be efficient if there are many DNA chains in the system. 
         
         """
-        atoms = self.atomistic_dataframe.copy()
+        atoms = self.dataframe.copy()
         atoms['index'] = list(range(len(atoms.index)))
         new_chainIDs = []
         c = 0
@@ -278,7 +278,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         """
         Add DNA base pair potentials. 
         
-        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -291,7 +291,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         """
         print('Add DNA base pairs.')
         pair_definition = self.pair_definition[self.pair_definition['DNA'] == self.dna_type]
-        atoms = self.atomistic_dataframe.copy()
+        atoms = self.dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
@@ -348,7 +348,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         We accelerate by using (B1, S1, B2) atom group as either donor or acceptor. 
         The group is a donor if resid(B1) + 1 == resid(B2), and an acceptor if resid(B1) - 1 == resid(B2). 
         
-        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -362,7 +362,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         print('Add DNA cross stackings.')
         cross_definition = self.cross_definition[self.cross_definition['DNA'] == self.dna_type].copy()
         cross_definition = cross_definition.set_index(['Base_d1', 'Base_a1', 'Base_a3'])
-        atoms = self.atomistic_dataframe.copy()
+        atoms = self.dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
@@ -433,7 +433,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         This is the old method, which is slower, because each (B1, S1, B2) atom group acts as both donors and acceptors. 
         This method is still correct, so it can be used for verifications. 
         
-        Please ensure two neighboring chains in self.atomistic_dataframe do not share the same chainID, so that different chains can be distinguished properly. 
+        Please ensure two neighboring chains in self.dataframe do not share the same chainID, so that different chains can be distinguished properly. 
         
         Parameters
         ----------
@@ -447,7 +447,7 @@ class SMOG3SPN2Model(CGModel, Mixin3SPN2ConfigParser):
         print('Add DNA cross stackings.')
         cross_definition = self.cross_definition[self.cross_definition['DNA'] == self.dna_type].copy()
         cross_definition = cross_definition.set_index(['Base_d1', 'Base_a1', 'Base_a3'])
-        atoms = self.atomistic_dataframe.copy()
+        atoms = self.dataframe.copy()
         # reset chainID to unique numbers so forces can be set properly
         atoms.index = list(range(len(atoms.index)))
         new_chainIDs = []
