@@ -82,21 +82,21 @@ class SSPNParser(object):
         
         """
         exclusions = []
-        if exclude12 and hasattr(self, 'sspn_bonds'):
-            for i, row in self.sspn_bonds.iterrows():
+        if exclude12 and hasattr(self, 'rna_bonds'):
+            for i, row in self.rna_bonds.iterrows():
                 exclusions.append((int(row['a1']), int(row['a2'])))
-        if exclude13 and hasattr(self, 'sspn_angles'):
-            for i, row in self.sspn_angles.iterrows():
+        if exclude13 and hasattr(self, 'rna_angles'):
+            for i, row in self.rna_angles.iterrows():
                 exclusions.append((int(row['a1']), int(row['a3'])))
-        if exclude14 and hasattr(self, 'sspn_dihedrals'):
-            for i, row in self.sspn_dihedrals.iterrows():
+        if exclude14 and hasattr(self, 'rna_dihedrals'):
+            for i, row in self.rna_dihedrals.iterrows():
                 exclusions.append((int(row['a1']), int(row['a4'])))
         if exclude_native_pairs and hasattr(self, 'native_pairs'):
             for i, row in self.native_pairs.iterrows():
                 exclusions.append((int(row['a1']), int(row['a2'])))
         exclusions = np.array(sorted(exclusions))
         self.exclusions = pd.DataFrame(exclusions, columns=['a1', 'a2']).drop_duplicates(ignore_index=True)
-        self.sspn_exclusions = self.exclusions.copy()
+        self.rna_exclusions = self.exclusions.copy()
         
     def parse_mol(self, get_native_pairs=True, frame=0, radius=0.1, bonded_radius=0.05, cutoff=0.6, box=None, 
                   use_pbc=False, exclude12=True, exclude13=True, exclude14=True, exclude_native_pairs=True, 
@@ -176,19 +176,19 @@ class SSPNParser(object):
         bonds, angles, dihedrals = np.array(bonds), np.array(angles), np.array(dihedrals)
         traj = mdtraj.load_pdb(self.cg_pdb)
 
-        self.sspn_bonds = pd.DataFrame(bonds, columns=['a1', 'a2'])
-        self.sspn_bonds['r0'] = mdtraj.compute_distances(traj, bonds, periodic=use_pbc)[frame]
-        self.sspn_bonds.loc[:, 'k_bond'] = 20000*bonded_energy_scale
-        self.sspn_angles = pd.DataFrame(angles, columns=['a1', 'a2', 'a3'])
-        self.sspn_angles['theta0'] = mdtraj.compute_angles(traj, angles, periodic=use_pbc)[frame]
-        self.sspn_angles.loc[:, 'k_angle'] = 40*bonded_energy_scale
-        self.sspn_dihedrals = pd.DataFrame(columns=['a1', 'a2', 'a3', 'a4', 'periodicity', 'phi0', 'k_dihedral'])
+        self.rna_bonds = pd.DataFrame(bonds, columns=['a1', 'a2'])
+        self.rna_bonds['r0'] = mdtraj.compute_distances(traj, bonds, periodic=use_pbc)[frame]
+        self.rna_bonds.loc[:, 'k_bond'] = 20000*bonded_energy_scale
+        self.rna_angles = pd.DataFrame(angles, columns=['a1', 'a2', 'a3'])
+        self.rna_angles['theta0'] = mdtraj.compute_angles(traj, angles, periodic=use_pbc)[frame]
+        self.rna_angles.loc[:, 'k_angle'] = 40*bonded_energy_scale
+        self.rna_dihedrals = pd.DataFrame(columns=['a1', 'a2', 'a3', 'a4', 'periodicity', 'phi0', 'k_dihedral'])
         phi = mdtraj.compute_dihedrals(traj, dihedrals, periodic=use_pbc)[frame]
         for i in range(dihedrals.shape[0]):
             row = dihedrals[i].tolist() + [1, phi[i] + np.pi, 1.0*bonded_energy_scale]
-            self.sspn_dihedrals.loc[len(self.sspn_dihedrals.index)] = row
+            self.rna_dihedrals.loc[len(self.rna_dihedrals.index)] = row
             row = dihedrals[i].tolist() + [3, 3*(phi[i] + np.pi), 0.5*bonded_energy_scale]
-            self.sspn_dihedrals.loc[len(self.sspn_dihedrals.index)] = row
+            self.rna_dihedrals.loc[len(self.rna_dihedrals.index)] = row
         # set native pairs
         if get_native_pairs:
             print('Get native pairs with shadow algorithm.')

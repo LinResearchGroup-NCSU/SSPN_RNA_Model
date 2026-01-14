@@ -20,9 +20,24 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
     """
     def __init__(self, dna_type='B_curved', default_parse_config=False):
         super().__init__(dna_type=dna_type, default_parse_config=default_parse_config)
-        self.bonded_attr_names += ['sspn_bonds', 'sspn_angles', 'sspn_dihedrals', 'sspn_exclusions']
+        self.bonded_attr_names += ['rna_bonds', 'rna_angles', 'rna_dihedrals', 'rna_exclusions']
 
-    def add_sspn_bonds(self, force_group=1):
+    def parse_all_exclusions(self):
+        """
+        Parse all the exclusions (including protein, RNA, and DNA exclusions). 
+        Run this command before adding nonbonded interactions. 
+        
+        """
+        super().parse_all_exclusions()
+        if hasattr(self, 'rna_exclusions'):
+            if getattr(self, 'rna_exclusions') is None:
+                self.rna_exclusions = pd.DataFrame(columns=['a1', 'a2'])
+        else:
+            self.rna_exclusions = pd.DataFrame(columns=['a1', 'a2'])
+        exclusions = pd.concat([self.rna_exclusions, self.protein_and_dna_exclusions], ignore_index=True)
+        self.exclusions = exclusions.sort_values(by=['a1', 'a2'], ignore_index=True)
+
+    def add_rna_bonds(self, force_group=1):
         """
         Add sspn bonds.
         
@@ -32,12 +47,12 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
             Force group. 
         
         """
-        if hasattr(self, 'sspn_bonds'):
+        if hasattr(self, 'rna_bonds'):
             print('Add sspn bonds.')
-            force = functional_terms.harmonic_bond_term(self.sspn_bonds, self.use_pbc, force_group)
+            force = functional_terms.harmonic_bond_term(self.rna_bonds, self.use_pbc, force_group)
             self.system.addForce(force)
 
-    def add_sspn_angles(self, threshold=130*np.pi/180, clip=False, force_group=2, verbose=True):
+    def add_rna_angles(self, threshold=130*np.pi/180, clip=False, force_group=2, verbose=True):
         """
         Add sspn angles. 
         
@@ -53,9 +68,9 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
             Force group. 
         
         """
-        if hasattr(self, 'sspn_angles'):
+        if hasattr(self, 'rna_angles'):
             any_theta0_beyond_threshold = False
-            for i, row in self.sspn_angles.iterrows():
+            for i, row in self.rna_angles.iterrows():
                 a1 = int(row['a1'])
                 a2 = int(row['a2'])
                 a3 = int(row['a3'])
@@ -65,11 +80,11 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
                     any_theta0_beyond_threshold = True
             if clip and any_theta0_beyond_threshold:
                 print(f'Decrease all the theta0 values larger than {threshold} to {threshold}.')
-                self.sspn_angles.loc[self.sspn_angles['theta0'] > threshold, 'theta0'] = threshold
-            force = functional_terms.harmonic_angle_term(self.sspn_angles, self.use_pbc, force_group)
+                self.rna_angles.loc[self.rna_angles['theta0'] > threshold, 'theta0'] = threshold
+            force = functional_terms.harmonic_angle_term(self.rna_angles, self.use_pbc, force_group)
             self.system.addForce(force)
 
-    def add_sspn_dihedrals(self, force_group=3):
+    def add_rna_dihedrals(self, force_group=3):
         """
         Add sspn dihedrals. 
         
@@ -79,9 +94,9 @@ class SSPNModel(SMOG3SPN2Model, Mixin3SPN2ConfigParser):
             Force group. 
         
         """
-        if hasattr(self, 'sspn_dihedrals'):
+        if hasattr(self, 'rna_dihedrals'):
             print('Add sspn dihedrals.')
-            force = functional_terms.periodic_dihedral_term(self.sspn_dihedrals, self.use_pbc, force_group)
+            force = functional_terms.periodic_dihedral_term(self.rna_dihedrals, self.use_pbc, force_group)
             self.system.addForce(force)
         
     def add_smog_vdwl(self, cutoff=1.6*unit.nanometer, force_group=11):
